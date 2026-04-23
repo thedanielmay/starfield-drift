@@ -960,7 +960,9 @@
   });
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) setPaused(true);
+    // Touch-only: desktop has no tap-to-resume affordance on the pause screen,
+    // and the pre-branch behaviour (no background pause on desktop) is fine.
+    if (document.hidden && touch.mode === 'touch') setPaused(true);
   });
 
   // ---------- Input ----------
