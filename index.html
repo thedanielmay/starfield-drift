@@ -601,8 +601,9 @@
   const againBtn = document.getElementById('againBtn');
 
   // ---------- Canvas sizing ----------
-  let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+  let W = 0, H = 0, DPR = 1;
   function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);   // re-read every resize
     const rect = canvas.getBoundingClientRect();
     W = rect.width; H = rect.height;
     canvas.width  = Math.floor(W * DPR);
@@ -624,6 +625,78 @@
   let hiScore = parseInt(localStorage.getItem(HI_KEY) || '0', 10) || 0;
   const formatScore = n => String(n).padStart(5,'0');
   hiEl.textContent = formatScore(hiScore);
+
+  // ---------- Touch controller (mode + state) ----------
+  const touch = {
+    mode: 'keyboard',
+    lastModeFlip: 0,
+    reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    overlay: null,     // filled in next task
+    pauseScreen: null, // filled in next task
+    portraitTip: null, // filled in next task
+    joystick: {
+      base: null,
+      knob: null,
+      activePointerId: null,
+      originX: 0, originY: 0,
+      radius: 50,
+      deadzone: 8,
+      active: false,
+      proximityAlpha: 1,
+    },
+    buttons: {
+      thrust: null, fire: null, warp: null, pause: null,
+      thrustPointerId: null, firePointerId: null, warpPointerId: null,
+      fireIntervalId: null, warpHoldTimerId: null,
+    },
+  };
+
+  function setInputMode(next, now) {
+    if (next === touch.mode) return;
+    if (now - touch.lastModeFlip < 1500) return; // debounce hybrid-device flicker
+    touch.mode = next;
+    touch.lastModeFlip = now;
+    document.body.classList.toggle('touch-mode', next === 'touch');
+  }
+
+  // initial mode: coarse pointer OR touchstart capability (WKWebView fallback)
+  {
+    const touchFirst = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    touch.mode = touchFirst ? 'touch' : 'keyboard';
+    document.body.classList.toggle('touch-mode', touch.mode === 'touch');
+  }
+
+  // reactive mode override on first real input
+  window.addEventListener('keydown', e => {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','h','H'].includes(e.key)) {
+      setInputMode('keyboard', performance.now());
+    }
+  }, true); // capture phase so this runs before the existing game handler
+
+  window.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch') setInputMode('touch', performance.now());
+  }, true); // capture phase: flips mode before any overlay handler runs on the same event
+
+  matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => {
+    touch.reducedMotion = e.matches;
+  });
+
+  // portrait detection → class on body drives #portrait-tip visibility
+  const portraitMQ = matchMedia('(orientation: portrait)');
+  const syncPortrait = () => document.body.classList.toggle('portrait', portraitMQ.matches);
+  portraitMQ.addEventListener('change', syncPortrait);
+  syncPortrait();
+
+  // wire overlay element refs
+  touch.overlay = document.getElementById('touch-controls');
+  touch.pauseScreen = document.getElementById('pause-screen');
+  touch.portraitTip = document.getElementById('portrait-tip');
+  touch.joystick.base = touch.overlay.querySelector('.stick-base');
+  touch.joystick.knob = touch.overlay.querySelector('.stick-knob');
+  touch.buttons.thrust = touch.overlay.querySelector('.btn-thrust');
+  touch.buttons.fire   = touch.overlay.querySelector('.btn-fire');
+  touch.buttons.warp   = touch.overlay.querySelector('.btn-warp');
+  touch.buttons.pause  = touch.overlay.querySelector('.btn-pause');
 
   // ---------- Input ----------
   const keys = Object.create(null);
