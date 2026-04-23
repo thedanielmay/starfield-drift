@@ -1430,6 +1430,27 @@
 
   function render(){
     if (state.paused) return;
+    // Joystick proximity alpha: fade when ship is near the joystick origin
+    if (touch.mode === 'touch' && touch.joystick.activePointerId !== null && state.ship && !state.ship.dead) {
+      const dx = state.ship.x - touch.joystick.originX;
+      const dy = state.ship.y - touch.joystick.originY;
+      const d = Math.hypot(dx, dy);
+      // Linear fade: alpha 1 at 120px, alpha 0.3 at 60px or closer, alpha 1 beyond 120
+      let a;
+      if (d >= 120) a = 1;
+      else if (d <= 60) a = 0.3;
+      else a = 0.3 + ((d - 60) / 60) * 0.7;
+      if (a !== touch.joystick.proximityAlpha) {
+        // Avoid redundant DOM writes when the ship is stationary in the proximity zone
+        touch.joystick.proximityAlpha = a;
+        touch.joystick.base.style.opacity = a;
+        touch.joystick.knob.style.opacity = a;
+      }
+    } else if (touch.joystick.proximityAlpha !== 1) {
+      touch.joystick.proximityAlpha = 1;
+      touch.joystick.base.style.opacity = '';  // falls back to CSS rule
+      touch.joystick.knob.style.opacity = '';
+    }
     ctx.clearRect(0,0,W,H);
 
     // shake
