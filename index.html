@@ -834,7 +834,8 @@
       shoot();
       // fireIntervalId is also cleared in the visibilitychange handler in Task 7
       touch.buttons.fireIntervalId = setInterval(() => {
-        if (state.mode === 'playing' && state.ship && !state.ship.dead) shoot();
+        // state.paused check guards the ~100ms race window between a pause and the next interval tick
+        if (!state.paused && state.mode === 'playing' && state.ship && !state.ship.dead) shoot();
       }, 100);
       e.preventDefault();
     });
@@ -859,8 +860,8 @@
       touch.buttons.warp.classList.add('charging');
       // warpHoldTimerId is also cleared in the visibilitychange handler in Task 7
       touch.buttons.warpHoldTimerId = setTimeout(() => {
-        // timer fired, button was still held → warp once
-        if (state.mode === 'playing' && state.ship && !state.ship.dead) hyperjump();
+        // timer fired, button was still held → warp once (unless paused in the meantime)
+        if (!state.paused && state.mode === 'playing' && state.ship && !state.ship.dead) hyperjump();
         touch.buttons.warpHoldTimerId = null;
         // do not retrigger until release
       }, 100);
@@ -882,6 +883,55 @@
   bindThrust();
   bindFire();
   bindWarp();
+
+  // ---------- Touch: rubber-band suppression ----------
+  // Pointer Events can't preventDefault the underlying scroll; we hook the
+  // native touch events in parallel, gated by body.touch-mode.
+  const suppressScroll = e => {
+    if (document.body.classList.contains('touch-mode')) e.preventDefault();
+  };
+  document.addEventListener('touchstart', suppressScroll, { passive: false });
+  document.addEventListener('touchmove',  suppressScroll, { passive: false });
+
+  // ---------- Touch: pause ----------
+  function setPaused(next) {
+    state.paused = next;
+    touch.pauseScreen.classList.toggle('visible', !!next);
+    if (next) {
+      // clear any in-flight input so we don't resume into a stuck state
+      if (touch.buttons.fireIntervalId !== null) {
+        clearInterval(touch.buttons.fireIntervalId);
+        touch.buttons.fireIntervalId = null;
+      }
+      if (touch.buttons.warpHoldTimerId !== null) {
+        clearTimeout(touch.buttons.warpHoldTimerId);
+        touch.buttons.warpHoldTimerId = null;
+        touch.buttons.warp.classList.remove('charging');
+      }
+      touch.buttons.thrustPointerId = null;
+      touch.buttons.firePointerId   = null;
+      touch.buttons.warpPointerId   = null;
+      touch.joystick.activePointerId = null;
+      touch.joystick.base.classList.remove('visible');
+      touch.joystick.knob.classList.remove('active');
+      keys['ArrowUp']    = false;
+      keys['ArrowLeft']  = false;
+      keys['ArrowRight'] = false;
+    }
+  }
+
+  touch.buttons.pause.addEventListener('pointerdown', e => {
+    setPaused(!state.paused);
+    e.preventDefault();
+  });
+  touch.pauseScreen.addEventListener('pointerdown', e => {
+    if (state.paused) setPaused(false);
+    e.preventDefault();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) setPaused(true);
+  });
 
   // ---------- Input ----------
   window.addEventListener('keydown', e => {
@@ -943,6 +993,7 @@
     time: 0,
     spawnInvuln: 0,
     thrustPulse: 0,
+    paused: false,
   };
 
   // ---------- Starfield (parallax) ----------
@@ -1076,6 +1127,7 @@
     state.particles.length = 0;
     state.ship = newShip();
     state.spawnInvuln = 2;
+    state.paused = false;
     spawnAsteroidsForWave(state.wave);
     state.mode = 'playing';
     titleOverlay.classList.add('hidden');
@@ -1163,6 +1215,7 @@
 
   // ---------- Update ----------
   function update(dt){
+    if (state.paused) return;
     state.time += dt;
 
     // stars drift
@@ -1376,11 +1429,12 @@
   }
 
   function render(){
+    if (state.paused) return;
     ctx.clearRect(0,0,W,H);
 
     // shake
     let sx=0, sy=0;
-    if (state.shake > 0){
+    if (state.shake > 0 && !touch.reducedMotion){
       sx = (Math.random()*2-1) * state.shake*0.6;
       sy = (Math.random()*2-1) * state.shake*0.6;
     }
