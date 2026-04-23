@@ -803,6 +803,86 @@
   touch.joystick.knob.addEventListener('pointerup', onJoystickRelease);
   touch.joystick.knob.addEventListener('pointercancel', onJoystickRelease);
 
+  // ---------- Touch: buttons ----------
+  function bindThrust() {
+    // No game-state guard here (unlike fire/warp): the update loop already
+    // checks `ship && !ship.dead` before applying ArrowUp, so setting the key
+    // from a dead/paused ship is harmless. Allowing the keydown-like input to
+    // always register matches the keyboard path and keeps the button feel tight.
+    touch.buttons.thrust.addEventListener('pointerdown', e => {
+      if (touch.buttons.thrustPointerId !== null) return;
+      touch.buttons.thrustPointerId = e.pointerId;
+      touch.buttons.thrust.setPointerCapture(e.pointerId);
+      keys['ArrowUp'] = true;
+      e.preventDefault();
+    });
+    const release = e => {
+      if (e.pointerId !== touch.buttons.thrustPointerId) return;
+      touch.buttons.thrustPointerId = null;
+      keys['ArrowUp'] = false;
+    };
+    touch.buttons.thrust.addEventListener('pointerup', release);
+    touch.buttons.thrust.addEventListener('pointercancel', release);
+  }
+
+  function bindFire() {
+    touch.buttons.fire.addEventListener('pointerdown', e => {
+      if (touch.buttons.firePointerId !== null) return;
+      if (state.mode !== 'playing' || !state.ship || state.ship.dead) return;
+      touch.buttons.firePointerId = e.pointerId;
+      touch.buttons.fire.setPointerCapture(e.pointerId);
+      shoot();
+      // fireIntervalId is also cleared in the visibilitychange handler in Task 7
+      touch.buttons.fireIntervalId = setInterval(() => {
+        if (state.mode === 'playing' && state.ship && !state.ship.dead) shoot();
+      }, 100);
+      e.preventDefault();
+    });
+    const release = e => {
+      if (e.pointerId !== touch.buttons.firePointerId) return;
+      touch.buttons.firePointerId = null;
+      if (touch.buttons.fireIntervalId !== null) {
+        clearInterval(touch.buttons.fireIntervalId);
+        touch.buttons.fireIntervalId = null;
+      }
+    };
+    touch.buttons.fire.addEventListener('pointerup', release);
+    touch.buttons.fire.addEventListener('pointercancel', release);
+  }
+
+  function bindWarp() {
+    touch.buttons.warp.addEventListener('pointerdown', e => {
+      if (touch.buttons.warpPointerId !== null) return;
+      if (state.mode !== 'playing' || !state.ship || state.ship.dead) return;
+      touch.buttons.warpPointerId = e.pointerId;
+      touch.buttons.warp.setPointerCapture(e.pointerId);
+      touch.buttons.warp.classList.add('charging');
+      // warpHoldTimerId is also cleared in the visibilitychange handler in Task 7
+      touch.buttons.warpHoldTimerId = setTimeout(() => {
+        // timer fired, button was still held → warp once
+        if (state.mode === 'playing' && state.ship && !state.ship.dead) hyperjump();
+        touch.buttons.warpHoldTimerId = null;
+        // do not retrigger until release
+      }, 100);
+      e.preventDefault();
+    });
+    const release = e => {
+      if (e.pointerId !== touch.buttons.warpPointerId) return;
+      touch.buttons.warpPointerId = null;
+      touch.buttons.warp.classList.remove('charging');
+      if (touch.buttons.warpHoldTimerId !== null) {
+        clearTimeout(touch.buttons.warpHoldTimerId);
+        touch.buttons.warpHoldTimerId = null;
+      }
+    };
+    touch.buttons.warp.addEventListener('pointerup', release);
+    touch.buttons.warp.addEventListener('pointercancel', release);
+  }
+
+  bindThrust();
+  bindFire();
+  bindWarp();
+
   // ---------- Input ----------
   window.addEventListener('keydown', e => {
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
