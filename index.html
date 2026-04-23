@@ -626,6 +626,11 @@
   const formatScore = n => String(n).padStart(5,'0');
   hiEl.textContent = formatScore(hiScore);
 
+  // ---------- Input state (shared) ----------
+  // Declared here so the touch overlay handlers below can write into it;
+  // the keyboard handlers that also write into it live in the Input section.
+  const keys = Object.create(null);
+
   // ---------- Touch controller (mode + state) ----------
   const touch = {
     mode: 'keyboard',
@@ -698,8 +703,107 @@
   touch.buttons.warp   = touch.overlay.querySelector('.btn-warp');
   touch.buttons.pause  = touch.overlay.querySelector('.btn-pause');
 
+  // ---------- Touch: joystick ----------
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  function getSafeAreaTopPx() {
+    return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
+  }
+  function getSafeAreaBottomPx() {
+    return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0;
+  }
+
+  function anchorJoystick(clientX, clientY) {
+    // compensate for visualViewport offset during iOS address-bar transitions
+    const vv = window.visualViewport;
+    const offX = vv ? vv.offsetLeft : 0;
+    const offY = vv ? vv.offsetTop : 0;
+    let x = clientX - offX;
+    let y = clientY - offY;
+
+    // clamp so the 100px base stays on-screen (50px half-base margin)
+    const maxX = window.innerWidth * 0.45 - 50;
+    const minX = 50;
+    const minY = getSafeAreaTopPx() + 50;
+    const maxY = window.innerHeight - getSafeAreaBottomPx() - 62;
+    x = clamp(x, minX, maxX);
+    y = clamp(y, minY, maxY);
+
+    touch.joystick.originX = x;
+    touch.joystick.originY = y;
+    touch.joystick.base.style.left = x + 'px';
+    touch.joystick.base.style.top  = y + 'px';
+    touch.joystick.knob.style.left = x + 'px';
+    touch.joystick.knob.style.top  = y + 'px';
+    touch.joystick.base.classList.add('visible');
+  }
+
+  function resetJoystick() {
+    touch.joystick.activePointerId = null;
+    touch.joystick.active = false;
+    touch.joystick.knob.classList.remove('active');
+    touch.joystick.base.classList.remove('visible');
+    touch.joystick.knob.style.left = touch.joystick.originX + 'px';
+    touch.joystick.knob.style.top  = touch.joystick.originY + 'px';
+    keys['ArrowLeft']  = false;
+    keys['ArrowRight'] = false;
+  }
+
+  // listen on the overlay for touchdowns in the left 45% of the viewport
+  touch.overlay.addEventListener('pointerdown', e => {
+    // Ordered cheapest-first: property lookups before DOM walks before style reads.
+    if (e.pointerType !== 'touch') return;
+    if (touch.joystick.activePointerId !== null) return; // already tracking
+    if (e.clientX > window.innerWidth * 0.45) return;    // right-side is button territory
+    if (e.target.closest('button')) return;              // let buttons handle their own
+    // visualViewport-corrected safe-area top check — consistent with anchorJoystick,
+    // otherwise iOS address-bar mid-transition lets touches anchor above visible content.
+    const vv = window.visualViewport;
+    const correctedY = e.clientY - (vv ? vv.offsetTop : 0);
+    if (correctedY < getSafeAreaTopPx()) return;         // reject Dynamic Island zone
+
+    touch.joystick.activePointerId = e.pointerId;
+    anchorJoystick(e.clientX, e.clientY);
+    // capture on the knob element so we keep getting events even if finger drags off
+    touch.joystick.knob.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  touch.joystick.knob.addEventListener('pointermove', e => {
+    if (e.pointerId !== touch.joystick.activePointerId) return;
+    const vv = window.visualViewport;
+    const offX = vv ? vv.offsetLeft : 0;
+    const offY = vv ? vv.offsetTop : 0;
+    const dx = (e.clientX - offX) - touch.joystick.originX;
+    const dy = (e.clientY - offY) - touch.joystick.originY;
+    const mag = Math.hypot(dx, dy);
+    const k = mag > touch.joystick.radius ? touch.joystick.radius / mag : 1;
+    const kx = dx * k, ky = dy * k;
+    touch.joystick.knob.style.left = (touch.joystick.originX + kx) + 'px';
+    touch.joystick.knob.style.top  = (touch.joystick.originY + ky) + 'px';
+
+    const past = mag > touch.joystick.deadzone;
+    touch.joystick.active = past;
+    touch.joystick.knob.classList.toggle('active', past);
+    if (past) {
+      keys['ArrowLeft']  = dx < -touch.joystick.deadzone;
+      keys['ArrowRight'] = dx >  touch.joystick.deadzone;
+    } else {
+      keys['ArrowLeft']  = false;
+      keys['ArrowRight'] = false;
+    }
+  });
+
+  // release: same handler block for up AND cancel (NOT pointerleave — Safari
+  // suppresses it on captured pointers, so listening for it is a trap)
+  function onJoystickRelease(e) {
+    if (e.pointerId !== touch.joystick.activePointerId) return;
+    resetJoystick();
+  }
+  touch.joystick.knob.addEventListener('pointerup', onJoystickRelease);
+  touch.joystick.knob.addEventListener('pointercancel', onJoystickRelease);
+
   // ---------- Input ----------
-  const keys = Object.create(null);
   window.addEventListener('keydown', e => {
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
     keys[e.key] = true;
