@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>STARFIELD DRIFT — Neon Arcade</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +23,10 @@
     --cabinet-hi:#2a1450;
     --cabinet-lo:#08030f;
     --chrome:#d6c8ff;
+    --sat:env(safe-area-inset-top);
+    --sar:env(safe-area-inset-right);
+    --sab:env(safe-area-inset-bottom);
+    --sal:env(safe-area-inset-left);
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -36,6 +40,8 @@
     user-select:none;
     -webkit-user-select:none;
   }
+  html,body{overscroll-behavior:none}
+  body{-webkit-touch-callout:none}
 
   /* ---------- Arcade cabinet ---------- */
   .room{
