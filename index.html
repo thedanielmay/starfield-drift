@@ -85,6 +85,43 @@
     gap:16px;
     z-index:2;
   }
+  /* ---------- Touch mode ---------- */
+  body.touch-mode{touch-action:manipulation}
+  body.touch-mode canvas{touch-action:none}
+
+  body.touch-mode .room::after{display:none}
+
+  body.touch-mode .cabinet{
+    width:100dvw;
+    height:100dvh;
+    padding:0;
+    border-radius:0;
+    background:none;
+    box-shadow:none;
+  }
+
+  body.touch-mode .deck,
+  body.touch-mode .bezel{display:none}
+
+  body.touch-mode .screen{
+    width:100dvw;
+    height:100dvh;
+    border-radius:0;
+  }
+
+  body.touch-mode #title,
+  body.touch-mode #gameover{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+  }
+
+  /* ---------- Reduced motion ---------- */
+  @media (prefers-reduced-motion: reduce){
+    .starfield, .room::after{animation:none !important}
+    #touch-controls button:active{transform:none}
+  }
+
   .cabinet::before{
     /* rivets + inner bevel */
     content:"";
