@@ -786,9 +786,14 @@
     keys['ArrowRight'] = false;
   }
 
-  // listen on the overlay for touchdowns in the left 45% of the viewport
-  touch.overlay.addEventListener('pointerdown', e => {
+  // Listen on document for touchdowns in the left 45% of the viewport.
+  // Must NOT be on touch.overlay — that element has pointer-events:none (so
+  // canvas stays clickable through empty overlay space), which means the
+  // overlay never receives pointerdown events. document works because pointer
+  // events bubble to it regardless of pointer-events on intermediate nodes.
+  document.addEventListener('pointerdown', e => {
     // Ordered cheapest-first: property lookups before DOM walks before style reads.
+    if (touch.mode !== 'touch') return;                  // desktop mouse ignored
     if (e.pointerType !== 'touch') return;
     if (touch.joystick.activePointerId !== null) return; // already tracking
     if (e.clientX > window.innerWidth * 0.45) return;    // right-side is button territory
@@ -1472,10 +1477,17 @@
 
   function render(){
     if (state.paused) return;
-    // Joystick proximity alpha: fade when ship is near the joystick origin
+    // Joystick proximity alpha: fade when ship is near the joystick origin.
+    // state.ship.x/y lives in canvas-rect space (offsets from canvas bounding rect).
+    // touch.joystick.originX/Y lives in visualViewport-corrected window space.
+    // Convert the origin to canvas-rect space so the distance is meaningful even
+    // when the address bar is mid-transition or the canvas isn't pinned at (0,0).
     if (touch.mode === 'touch' && touch.joystick.activePointerId !== null && state.ship && !state.ship.dead) {
-      const dx = state.ship.x - touch.joystick.originX;
-      const dy = state.ship.y - touch.joystick.originY;
+      const rect = canvas.getBoundingClientRect();
+      const originCanvasX = touch.joystick.originX - rect.left;
+      const originCanvasY = touch.joystick.originY - rect.top;
+      const dx = state.ship.x - originCanvasX;
+      const dy = state.ship.y - originCanvasY;
       const d = Math.hypot(dx, dy);
       // Linear fade: alpha 1 at 120px, alpha 0.3 at 60px or closer, alpha 1 beyond 120
       let a;
