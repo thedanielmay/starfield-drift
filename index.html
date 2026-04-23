@@ -736,6 +736,13 @@
   // ---------- Touch: joystick ----------
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
+  // Safari can throw InvalidStateError if the pointer is no longer active by
+  // the time the handler runs; swallow it so e.preventDefault() still runs.
+  const capturePointer = (el, pointerId) => {
+    try { el.setPointerCapture(pointerId); }
+    catch (err) { console.warn('setPointerCapture failed', err); }
+  };
+
   function getSafeAreaTopPx() {
     return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
   }
@@ -795,7 +802,7 @@
     touch.joystick.activePointerId = e.pointerId;
     anchorJoystick(e.clientX, e.clientY);
     // capture on the knob element so we keep getting events even if finger drags off
-    touch.joystick.knob.setPointerCapture(e.pointerId);
+    capturePointer(touch.joystick.knob, e.pointerId);
     e.preventDefault();
   });
 
@@ -842,7 +849,7 @@
     touch.buttons.thrust.addEventListener('pointerdown', e => {
       if (touch.buttons.thrustPointerId !== null) return;
       touch.buttons.thrustPointerId = e.pointerId;
-      touch.buttons.thrust.setPointerCapture(e.pointerId);
+      capturePointer(touch.buttons.thrust, e.pointerId);
       keys['ArrowUp'] = true;
       e.preventDefault();
     });
@@ -860,7 +867,7 @@
       if (touch.buttons.firePointerId !== null) return;
       if (state.mode !== 'playing' || !state.ship || state.ship.dead) return;
       touch.buttons.firePointerId = e.pointerId;
-      touch.buttons.fire.setPointerCapture(e.pointerId);
+      capturePointer(touch.buttons.fire, e.pointerId);
       shoot();
       // fireIntervalId is also cleared in the visibilitychange handler in Task 7
       touch.buttons.fireIntervalId = setInterval(() => {
@@ -886,7 +893,7 @@
       if (touch.buttons.warpPointerId !== null) return;
       if (state.mode !== 'playing' || !state.ship || state.ship.dead) return;
       touch.buttons.warpPointerId = e.pointerId;
-      touch.buttons.warp.setPointerCapture(e.pointerId);
+      capturePointer(touch.buttons.warp, e.pointerId);
       touch.buttons.warp.classList.add('charging');
       // warpHoldTimerId is also cleared in the visibilitychange handler in Task 7
       touch.buttons.warpHoldTimerId = setTimeout(() => {
@@ -951,6 +958,9 @@
   }
 
   touch.buttons.pause.addEventListener('pointerdown', e => {
+    // Only meaningful during play — tapping PAUSE on title/gameover would
+    // cover the Start/Replay button with an overlay that has no way out.
+    if (state.mode !== 'playing') return;
     setPaused(!state.paused);
     e.preventDefault();
   });
