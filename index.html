@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>STARFIELD DRIFT — Neon Arcade</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +23,10 @@
     --cabinet-hi:#2a1450;
     --cabinet-lo:#08030f;
     --chrome:#d6c8ff;
+    --sat:env(safe-area-inset-top);
+    --sar:env(safe-area-inset-right);
+    --sab:env(safe-area-inset-bottom);
+    --sal:env(safe-area-inset-left);
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -36,6 +40,8 @@
     user-select:none;
     -webkit-user-select:none;
   }
+  html,body{overscroll-behavior:none}
+  body{-webkit-touch-callout:none}
 
   /* ---------- Arcade cabinet ---------- */
   .room{
@@ -79,6 +85,187 @@
     gap:16px;
     z-index:2;
   }
+  /* ---------- Touch mode ---------- */
+  body.touch-mode{touch-action:manipulation}
+  body.touch-mode canvas{touch-action:none}
+
+  body.touch-mode .room::after{display:none}
+
+  body.touch-mode .cabinet{
+    width:100dvw;
+    height:100dvh;
+    padding:0;
+    border-radius:0;
+    background:none;
+    box-shadow:none;
+  }
+
+  body.touch-mode .deck,
+  body.touch-mode .bezel{display:none}
+
+  body.touch-mode .screen{
+    width:100dvw;
+    height:100dvh;
+    border-radius:0;
+  }
+
+  body.touch-mode #title,
+  body.touch-mode #gameover{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+  }
+
+  /* ---------- Reduced motion ---------- */
+  @media (prefers-reduced-motion: reduce){
+    .starfield, .room::after{animation:none !important}
+    #touch-controls button:active{transform:none}
+  }
+
+  /* ---------- Touch overlay ---------- */
+  #touch-controls{
+    display:none;
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    padding:var(--sat) var(--sar) calc(var(--sab) + 12px) var(--sal);
+    z-index:500;
+    font-family:"JetBrains Mono", monospace;
+  }
+  body.touch-mode #touch-controls{display:block}
+
+  #touch-controls .stick-base{
+    position:absolute;
+    width:100px; height:100px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(123,75,255,0.18), rgba(123,75,255,0.05));
+    border:2px dashed rgba(59,240,255,0.5);
+    pointer-events:none;
+    transform:translate(-50%,-50%);
+    opacity:0;
+    transition:opacity 0.15s;
+  }
+  #touch-controls .stick-base.visible{opacity:1}
+  #touch-controls .stick-knob{
+    position:absolute;
+    left:50%; top:50%;
+    width:44px; height:44px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(180,220,255,0.8), rgba(123,75,255,0.5));
+    border:2px solid rgba(214,200,255,0.9);
+    transform:translate(-50%,-50%);
+    box-shadow:0 0 12px rgba(123,75,255,0.6);
+    transition:background 0.1s, box-shadow 0.1s;
+  }
+  #touch-controls .stick-knob.active{
+    background:radial-gradient(circle, rgba(59,240,255,0.95), rgba(217,70,255,0.6));
+    box-shadow:0 0 20px rgba(59,240,255,0.8);
+  }
+
+  #touch-controls .btn-col{
+    position:absolute;
+    right:calc(var(--sar) + 20px);
+    bottom:calc(var(--sab) + 20px);
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    align-items:center;
+    pointer-events:none;
+  }
+  #touch-controls button{
+    pointer-events:auto;
+    border:2px solid currentColor;
+    border-radius:50%;
+    background:rgba(0,0,0,0.4);
+    color:var(--ink);
+    font-family:inherit;
+    font-weight:bold;
+    letter-spacing:1px;
+    cursor:pointer;
+    position:relative;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
+  }
+  #touch-controls button:active{transform:scale(0.93)}
+  #touch-controls button .chip{
+    position:absolute;
+    inset:4px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,0.55);
+    color:#fff;
+    font-size:10px;
+    letter-spacing:1px;
+  }
+  #touch-controls .btn-thrust{width:64px; height:64px; color:var(--amber)}
+  #touch-controls .btn-fire  {width:56px; height:56px; color:var(--danger)}
+  #touch-controls .btn-warp  {width:48px; height:48px; color:var(--magenta)}
+
+  #touch-controls .btn-warp .fill{
+    position:absolute;
+    inset:-2px;
+    border-radius:50%;
+    border:2px solid var(--cyan);
+    clip-path:inset(100% 0 0 0);
+    pointer-events:none;
+  }
+  #touch-controls .btn-warp.charging .fill{animation:warpFill 100ms linear forwards}
+  @keyframes warpFill{to{clip-path:inset(0 0 0 0)}}
+
+  #touch-controls .btn-pause{
+    pointer-events:auto;
+    position:absolute;
+    top:calc(var(--sat) + 10px);
+    left:50%;
+    transform:translateX(-50%);
+    width:32px; height:32px;
+    border:2px solid var(--chrome);
+    border-radius:50%;
+    background:rgba(0,0,0,0.4);
+    color:var(--chrome);
+    font-size:11px;
+    font-family:inherit;
+    cursor:pointer;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
+  }
+
+  #pause-screen{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(7,3,15,0.8);
+    z-index:9998;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink);
+    font-family:"Orbitron", sans-serif;
+    font-size:20px;
+    letter-spacing:4px;
+  }
+  #pause-screen.visible{display:flex}
+
+  #portrait-tip{
+    display:none;
+    position:fixed;
+    top:calc(var(--sat) + 48px);
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(0,0,0,0.6);
+    border:1px solid var(--cyan);
+    color:var(--cyan);
+    padding:8px 14px;
+    border-radius:4px;
+    font-size:12px;
+    letter-spacing:1px;
+    z-index:9997;
+    pointer-events:auto;
+  }
+  body.touch-mode.portrait #portrait-tip{display:block}
+
   .cabinet::before{
     /* rivets + inner bevel */
     content:"";
@@ -309,7 +496,24 @@
     <!-- SCREEN -->
     <div class="screen-wrap">
       <div class="screen">
-        <canvas id="game"></canvas>
+        <canvas id="game" role="application" aria-label="Starfield Drift — arcade action game, not accessible to screen readers"></canvas>
+        <!-- aria-hidden is intentional: the canvas itself declares screen-reader
+             exclusion. Button aria-labels exist for a11y tooling that bypasses
+             aria-hidden (e.g., VoiceOver's Item Chooser) but are not the primary
+             surface. Do not remove aria-hidden without also reconsidering the
+             canvas role="application" label. -->
+        <div id="touch-controls" aria-hidden="true">
+          <div class="stick-base"></div>
+          <div class="stick-knob"></div>
+          <div class="btn-col">
+            <button class="btn-thrust" aria-label="Thrust"><span class="chip">THRUST</span></button>
+            <button class="btn-fire" aria-label="Fire"><span class="chip">FIRE</span></button>
+            <button class="btn-warp" aria-label="Warp (hold briefly)"><span class="chip">WARP</span><span class="fill"></span></button>
+          </div>
+          <button class="btn-pause" aria-label="Pause">II</button>
+        </div>
+        <div id="pause-screen">PAUSED — TAP TO RESUME</div>
+        <div id="portrait-tip">↻ ROTATE FOR BEST VIEW</div>
         <div class="scanlines"></div>
         <div class="vignette"></div>
 
@@ -397,8 +601,9 @@
   const againBtn = document.getElementById('againBtn');
 
   // ---------- Canvas sizing ----------
-  let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+  let W = 0, H = 0, DPR = 1;
   function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);   // re-read every resize
     const rect = canvas.getBoundingClientRect();
     W = rect.width; H = rect.height;
     canvas.width  = Math.floor(W * DPR);
@@ -421,8 +626,356 @@
   const formatScore = n => String(n).padStart(5,'0');
   hiEl.textContent = formatScore(hiScore);
 
-  // ---------- Input ----------
+  // ---------- Input state (shared) ----------
+  // Declared here so the touch overlay handlers below can write into it;
+  // the keyboard handlers that also write into it live in the Input section.
   const keys = Object.create(null);
+
+  // ========================================================================
+  // MANUAL TEST CHECKLIST — run after any change to input or touch code
+  // ------------------------------------------------------------------------
+  // Desktop (keyboard-only path):
+  //   - Arrow keys rotate/thrust; Space fires; H hyperjumps.
+  //   - Start and Replay click/tap reach startGame().
+  //   - No body.touch-mode class; arcade cabinet renders normally.
+  //
+  // Touch device (iPhone Safari):
+  //   - Page loads with body.touch-mode; cabinet chrome hidden; canvas fills.
+  //   - Floating joystick anchors in left 45% on touchdown; rotates ship
+  //     left/right; releases cleanly; no stuck ArrowLeft/Right after lift.
+  //   - THRUST button: hold = continuous thrust; release stops.
+  //   - FIRE button: tap = one shot; hold = ~10 shots/sec.
+  //   - WARP button: <100ms tap = nothing; >=100ms hold = one warp; hold
+  //     indefinitely = does not retrigger (must release to warp again).
+  //   - PAUSE button pauses; tapping pause screen resumes.
+  //   - Multi-touch: joystick + THRUST + FIRE + WARP all simultaneous.
+  //
+  // Hybrid device (iPad + Bluetooth keyboard, Surface):
+  //   - First keydown flips off touch-mode within 1.5s (debounce).
+  //   - First touch pointerdown flips back to touch-mode within 1.5s.
+  //   - No flicker when alternating rapidly (debounce suppresses).
+  //
+  // OS integration:
+  //   - Backgrounding the tab pauses the game and resets input state.
+  //   - prefers-reduced-motion suppresses screen-shake and decorative
+  //     animations; gameplay motion (ship, asteroids, bullets) unaffected.
+  // ========================================================================
+
+  // ---------- Touch controller (mode + state) ----------
+  const touch = {
+    mode: 'keyboard',
+    lastModeFlip: 0,
+    reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    overlay: null,     // filled in next task
+    pauseScreen: null, // filled in next task
+    portraitTip: null, // filled in next task
+    joystick: {
+      base: null,
+      knob: null,
+      activePointerId: null,
+      originX: 0, originY: 0,
+      radius: 50,
+      deadzone: 8,
+      active: false,
+      proximityAlpha: 1,
+    },
+    buttons: {
+      thrust: null, fire: null, warp: null, pause: null,
+      thrustPointerId: null, firePointerId: null, warpPointerId: null,
+      fireIntervalId: null, warpHoldTimerId: null,
+    },
+  };
+
+  function setInputMode(next, now) {
+    if (next === touch.mode) return;
+    if (now - touch.lastModeFlip < 1500) return; // debounce hybrid-device flicker
+    touch.mode = next;
+    touch.lastModeFlip = now;
+    document.body.classList.toggle('touch-mode', next === 'touch');
+  }
+
+  // initial mode: coarse pointer OR touchstart capability (WKWebView fallback)
+  {
+    const touchFirst = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    touch.mode = touchFirst ? 'touch' : 'keyboard';
+    document.body.classList.toggle('touch-mode', touch.mode === 'touch');
+  }
+
+  // reactive mode override on first real input
+  window.addEventListener('keydown', e => {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','h','H'].includes(e.key)) {
+      setInputMode('keyboard', performance.now());
+    }
+  }, true); // capture phase so this runs before the existing game handler
+
+  window.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch') setInputMode('touch', performance.now());
+  }, true); // capture phase: flips mode before any overlay handler runs on the same event
+
+  matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => {
+    touch.reducedMotion = e.matches;
+  });
+
+  // portrait detection → class on body drives #portrait-tip visibility
+  const portraitMQ = matchMedia('(orientation: portrait)');
+  const syncPortrait = () => document.body.classList.toggle('portrait', portraitMQ.matches);
+  portraitMQ.addEventListener('change', syncPortrait);
+  syncPortrait();
+
+  // wire overlay element refs
+  touch.overlay = document.getElementById('touch-controls');
+  touch.pauseScreen = document.getElementById('pause-screen');
+  touch.portraitTip = document.getElementById('portrait-tip');
+  touch.joystick.base = touch.overlay.querySelector('.stick-base');
+  touch.joystick.knob = touch.overlay.querySelector('.stick-knob');
+  touch.buttons.thrust = touch.overlay.querySelector('.btn-thrust');
+  touch.buttons.fire   = touch.overlay.querySelector('.btn-fire');
+  touch.buttons.warp   = touch.overlay.querySelector('.btn-warp');
+  touch.buttons.pause  = touch.overlay.querySelector('.btn-pause');
+
+  // ---------- Touch: joystick ----------
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  // Safari can throw InvalidStateError if the pointer is no longer active by
+  // the time the handler runs; swallow it so e.preventDefault() still runs.
+  const capturePointer = (el, pointerId) => {
+    try { el.setPointerCapture(pointerId); }
+    catch (err) { console.warn('setPointerCapture failed', err); }
+  };
+
+  function getSafeAreaTopPx() {
+    return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
+  }
+  function getSafeAreaBottomPx() {
+    return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0;
+  }
+
+  function anchorJoystick(clientX, clientY) {
+    // compensate for visualViewport offset during iOS address-bar transitions
+    const vv = window.visualViewport;
+    const offX = vv ? vv.offsetLeft : 0;
+    const offY = vv ? vv.offsetTop : 0;
+    let x = clientX - offX;
+    let y = clientY - offY;
+
+    // clamp so the 100px base stays on-screen (50px half-base margin)
+    const maxX = window.innerWidth * 0.45 - 50;
+    const minX = 50;
+    const minY = getSafeAreaTopPx() + 50;
+    const maxY = window.innerHeight - getSafeAreaBottomPx() - 62;
+    x = clamp(x, minX, maxX);
+    y = clamp(y, minY, maxY);
+
+    touch.joystick.originX = x;
+    touch.joystick.originY = y;
+    touch.joystick.base.style.left = x + 'px';
+    touch.joystick.base.style.top  = y + 'px';
+    touch.joystick.knob.style.left = x + 'px';
+    touch.joystick.knob.style.top  = y + 'px';
+    touch.joystick.base.classList.add('visible');
+  }
+
+  function resetJoystick() {
+    touch.joystick.activePointerId = null;
+    touch.joystick.active = false;
+    touch.joystick.knob.classList.remove('active');
+    touch.joystick.base.classList.remove('visible');
+    touch.joystick.knob.style.left = touch.joystick.originX + 'px';
+    touch.joystick.knob.style.top  = touch.joystick.originY + 'px';
+    keys['ArrowLeft']  = false;
+    keys['ArrowRight'] = false;
+  }
+
+  // listen on the overlay for touchdowns in the left 45% of the viewport
+  touch.overlay.addEventListener('pointerdown', e => {
+    // Ordered cheapest-first: property lookups before DOM walks before style reads.
+    if (e.pointerType !== 'touch') return;
+    if (touch.joystick.activePointerId !== null) return; // already tracking
+    if (e.clientX > window.innerWidth * 0.45) return;    // right-side is button territory
+    if (e.target.closest('button')) return;              // let buttons handle their own
+    // visualViewport-corrected safe-area top check — consistent with anchorJoystick,
+    // otherwise iOS address-bar mid-transition lets touches anchor above visible content.
+    const vv = window.visualViewport;
+    const correctedY = e.clientY - (vv ? vv.offsetTop : 0);
+    if (correctedY < getSafeAreaTopPx()) return;         // reject Dynamic Island zone
+
+    touch.joystick.activePointerId = e.pointerId;
+    anchorJoystick(e.clientX, e.clientY);
+    // capture on the knob element so we keep getting events even if finger drags off
+    capturePointer(touch.joystick.knob, e.pointerId);
+    e.preventDefault();
+  });
+
+  touch.joystick.knob.addEventListener('pointermove', e => {
+    if (e.pointerId !== touch.joystick.activePointerId) return;
+    const vv = window.visualViewport;
+    const offX = vv ? vv.offsetLeft : 0;
+    const offY = vv ? vv.offsetTop : 0;
+    const dx = (e.clientX - offX) - touch.joystick.originX;
+    const dy = (e.clientY - offY) - touch.joystick.originY;
+    const mag = Math.hypot(dx, dy);
+    const k = mag > touch.joystick.radius ? touch.joystick.radius / mag : 1;
+    const kx = dx * k, ky = dy * k;
+    touch.joystick.knob.style.left = (touch.joystick.originX + kx) + 'px';
+    touch.joystick.knob.style.top  = (touch.joystick.originY + ky) + 'px';
+
+    const past = mag > touch.joystick.deadzone;
+    touch.joystick.active = past;
+    touch.joystick.knob.classList.toggle('active', past);
+    if (past) {
+      keys['ArrowLeft']  = dx < -touch.joystick.deadzone;
+      keys['ArrowRight'] = dx >  touch.joystick.deadzone;
+    } else {
+      keys['ArrowLeft']  = false;
+      keys['ArrowRight'] = false;
+    }
+  });
+
+  // release: same handler block for up AND cancel (NOT pointerleave — Safari
+  // suppresses it on captured pointers, so listening for it is a trap)
+  function onJoystickRelease(e) {
+    if (e.pointerId !== touch.joystick.activePointerId) return;
+    resetJoystick();
+  }
+  touch.joystick.knob.addEventListener('pointerup', onJoystickRelease);
+  touch.joystick.knob.addEventListener('pointercancel', onJoystickRelease);
+
+  // ---------- Touch: buttons ----------
+  function bindThrust() {
+    // No game-state guard here (unlike fire/warp): the update loop already
+    // checks `ship && !ship.dead` before applying ArrowUp, so setting the key
+    // from a dead/paused ship is harmless. Allowing the keydown-like input to
+    // always register matches the keyboard path and keeps the button feel tight.
+    touch.buttons.thrust.addEventListener('pointerdown', e => {
+      if (touch.buttons.thrustPointerId !== null) return;
+      touch.buttons.thrustPointerId = e.pointerId;
+      capturePointer(touch.buttons.thrust, e.pointerId);
+      keys['ArrowUp'] = true;
+      e.preventDefault();
+    });
+    const release = e => {
+      if (e.pointerId !== touch.buttons.thrustPointerId) return;
+      touch.buttons.thrustPointerId = null;
+      keys['ArrowUp'] = false;
+    };
+    touch.buttons.thrust.addEventListener('pointerup', release);
+    touch.buttons.thrust.addEventListener('pointercancel', release);
+  }
+
+  function bindFire() {
+    touch.buttons.fire.addEventListener('pointerdown', e => {
+      if (touch.buttons.firePointerId !== null) return;
+      if (state.mode !== 'playing' || !state.ship || state.ship.dead) return;
+      touch.buttons.firePointerId = e.pointerId;
+      capturePointer(touch.buttons.fire, e.pointerId);
+      shoot();
+      // fireIntervalId is also cleared in the visibilitychange handler in Task 7
+      touch.buttons.fireIntervalId = setInterval(() => {
+        // state.paused check guards the ~100ms race window between a pause and the next interval tick
+        if (!state.paused && state.mode === 'playing' && state.ship && !state.ship.dead) shoot();
+      }, 100);
+      e.preventDefault();
+    });
+    const release = e => {
+      if (e.pointerId !== touch.buttons.firePointerId) return;
+      touch.buttons.firePointerId = null;
+      if (touch.buttons.fireIntervalId !== null) {
+        clearInterval(touch.buttons.fireIntervalId);
+        touch.buttons.fireIntervalId = null;
+      }
+    };
+    touch.buttons.fire.addEventListener('pointerup', release);
+    touch.buttons.fire.addEventListener('pointercancel', release);
+  }
+
+  function bindWarp() {
+    touch.buttons.warp.addEventListener('pointerdown', e => {
+      if (touch.buttons.warpPointerId !== null) return;
+      if (state.mode !== 'playing' || !state.ship || state.ship.dead) return;
+      touch.buttons.warpPointerId = e.pointerId;
+      capturePointer(touch.buttons.warp, e.pointerId);
+      touch.buttons.warp.classList.add('charging');
+      // warpHoldTimerId is also cleared in the visibilitychange handler in Task 7
+      touch.buttons.warpHoldTimerId = setTimeout(() => {
+        // timer fired, button was still held → warp once (unless paused in the meantime)
+        if (!state.paused && state.mode === 'playing' && state.ship && !state.ship.dead) hyperjump();
+        touch.buttons.warpHoldTimerId = null;
+        // do not retrigger until release
+      }, 100);
+      e.preventDefault();
+    });
+    const release = e => {
+      if (e.pointerId !== touch.buttons.warpPointerId) return;
+      touch.buttons.warpPointerId = null;
+      touch.buttons.warp.classList.remove('charging');
+      if (touch.buttons.warpHoldTimerId !== null) {
+        clearTimeout(touch.buttons.warpHoldTimerId);
+        touch.buttons.warpHoldTimerId = null;
+      }
+    };
+    touch.buttons.warp.addEventListener('pointerup', release);
+    touch.buttons.warp.addEventListener('pointercancel', release);
+  }
+
+  bindThrust();
+  bindFire();
+  bindWarp();
+
+  // ---------- Touch: rubber-band suppression ----------
+  // Pointer Events can't preventDefault the underlying scroll; we hook the
+  // native touch events in parallel, gated by body.touch-mode.
+  const suppressScroll = e => {
+    if (document.body.classList.contains('touch-mode')) e.preventDefault();
+  };
+  document.addEventListener('touchstart', suppressScroll, { passive: false });
+  document.addEventListener('touchmove',  suppressScroll, { passive: false });
+
+  // ---------- Touch: pause ----------
+  function setPaused(next) {
+    state.paused = next;
+    touch.pauseScreen.classList.toggle('visible', !!next);
+    if (next) {
+      // clear any in-flight input so we don't resume into a stuck state
+      if (touch.buttons.fireIntervalId !== null) {
+        clearInterval(touch.buttons.fireIntervalId);
+        touch.buttons.fireIntervalId = null;
+      }
+      if (touch.buttons.warpHoldTimerId !== null) {
+        clearTimeout(touch.buttons.warpHoldTimerId);
+        touch.buttons.warpHoldTimerId = null;
+        touch.buttons.warp.classList.remove('charging');
+      }
+      touch.buttons.thrustPointerId = null;
+      touch.buttons.firePointerId   = null;
+      touch.buttons.warpPointerId   = null;
+      touch.joystick.activePointerId = null;
+      touch.joystick.base.classList.remove('visible');
+      touch.joystick.knob.classList.remove('active');
+      keys['ArrowUp']    = false;
+      keys['ArrowLeft']  = false;
+      keys['ArrowRight'] = false;
+    }
+  }
+
+  touch.buttons.pause.addEventListener('pointerdown', e => {
+    // Only meaningful during play — tapping PAUSE on title/gameover would
+    // cover the Start/Replay button with an overlay that has no way out.
+    if (state.mode !== 'playing') return;
+    setPaused(!state.paused);
+    e.preventDefault();
+  });
+  touch.pauseScreen.addEventListener('pointerdown', e => {
+    if (state.paused) setPaused(false);
+    e.preventDefault();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    // Touch-only: desktop has no tap-to-resume affordance on the pause screen,
+    // and the pre-branch behaviour (no background pause on desktop) is fine.
+    if (document.hidden && touch.mode === 'touch') setPaused(true);
+  });
+
+  // ---------- Input ----------
   window.addEventListener('keydown', e => {
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
     keys[e.key] = true;
@@ -482,6 +1035,7 @@
     time: 0,
     spawnInvuln: 0,
     thrustPulse: 0,
+    paused: false,
   };
 
   // ---------- Starfield (parallax) ----------
@@ -615,6 +1169,7 @@
     state.particles.length = 0;
     state.ship = newShip();
     state.spawnInvuln = 2;
+    state.paused = false;
     spawnAsteroidsForWave(state.wave);
     state.mode = 'playing';
     titleOverlay.classList.add('hidden');
@@ -702,6 +1257,7 @@
 
   // ---------- Update ----------
   function update(dt){
+    if (state.paused) return;
     state.time += dt;
 
     // stars drift
@@ -915,11 +1471,33 @@
   }
 
   function render(){
+    if (state.paused) return;
+    // Joystick proximity alpha: fade when ship is near the joystick origin
+    if (touch.mode === 'touch' && touch.joystick.activePointerId !== null && state.ship && !state.ship.dead) {
+      const dx = state.ship.x - touch.joystick.originX;
+      const dy = state.ship.y - touch.joystick.originY;
+      const d = Math.hypot(dx, dy);
+      // Linear fade: alpha 1 at 120px, alpha 0.3 at 60px or closer, alpha 1 beyond 120
+      let a;
+      if (d >= 120) a = 1;
+      else if (d <= 60) a = 0.3;
+      else a = 0.3 + ((d - 60) / 60) * 0.7;
+      if (a !== touch.joystick.proximityAlpha) {
+        // Avoid redundant DOM writes when the ship is stationary in the proximity zone
+        touch.joystick.proximityAlpha = a;
+        touch.joystick.base.style.opacity = a;
+        touch.joystick.knob.style.opacity = a;
+      }
+    } else if (touch.joystick.proximityAlpha !== 1) {
+      touch.joystick.proximityAlpha = 1;
+      touch.joystick.base.style.opacity = '';  // falls back to CSS rule
+      touch.joystick.knob.style.opacity = '';
+    }
     ctx.clearRect(0,0,W,H);
 
     // shake
     let sx=0, sy=0;
-    if (state.shake > 0){
+    if (state.shake > 0 && !touch.reducedMotion){
       sx = (Math.random()*2-1) * state.shake*0.6;
       sy = (Math.random()*2-1) * state.shake*0.6;
     }
