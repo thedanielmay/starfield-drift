@@ -631,6 +631,36 @@
   // the keyboard handlers that also write into it live in the Input section.
   const keys = Object.create(null);
 
+  // ========================================================================
+  // MANUAL TEST CHECKLIST — run after any change to input or touch code
+  // ------------------------------------------------------------------------
+  // Desktop (keyboard-only path):
+  //   - Arrow keys rotate/thrust; Space fires; H hyperjumps.
+  //   - Start and Replay click/tap reach startGame().
+  //   - No body.touch-mode class; arcade cabinet renders normally.
+  //
+  // Touch device (iPhone Safari):
+  //   - Page loads with body.touch-mode; cabinet chrome hidden; canvas fills.
+  //   - Floating joystick anchors in left 45% on touchdown; rotates ship
+  //     left/right; releases cleanly; no stuck ArrowLeft/Right after lift.
+  //   - THRUST button: hold = continuous thrust; release stops.
+  //   - FIRE button: tap = one shot; hold = ~10 shots/sec.
+  //   - WARP button: <100ms tap = nothing; >=100ms hold = one warp; hold
+  //     indefinitely = does not retrigger (must release to warp again).
+  //   - PAUSE button pauses; tapping pause screen resumes.
+  //   - Multi-touch: joystick + THRUST + FIRE + WARP all simultaneous.
+  //
+  // Hybrid device (iPad + Bluetooth keyboard, Surface):
+  //   - First keydown flips off touch-mode within 1.5s (debounce).
+  //   - First touch pointerdown flips back to touch-mode within 1.5s.
+  //   - No flicker when alternating rapidly (debounce suppresses).
+  //
+  // OS integration:
+  //   - Backgrounding the tab pauses the game and resets input state.
+  //   - prefers-reduced-motion suppresses screen-shake and decorative
+  //     animations; gameplay motion (ship, asteroids, bullets) unaffected.
+  // ========================================================================
+
   // ---------- Touch controller (mode + state) ----------
   const touch = {
     mode: 'keyboard',
